@@ -1,0 +1,1819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GreenChatzz — Free Realtime Chat Rooms | Meet People Worldwide</title>
+<meta name="description" content="GreenChatz is a free no-registration chat platform. Just pick a username and start chatting instantly with people from 60+ countries. No email, no password, no download needed."/>
+<meta name="keywords" content="free chat rooms, online chat, realtime chat, private messaging, meet people online, chat app, international chat, secure chat"/>
+<meta property="og:title" content="GreenChatz — Free Realtime Chat Rooms"/>
+<meta property="og:description" content="Join thousands of people chatting on GreenChatz right now. Free, instant, secure. Meet friends from around the world."/>
+<meta property="og:type" content="website"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' rx='10' fill='%2322c55e'/><text x='20' y='26' text-anchor='middle' font-family='sans-serif' font-weight='800' font-size='19' fill='white'>GC</text></svg>"/>
+<link rel="canonical" href="https://greenchatz.com/"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// Runs before body paints — hide landing instantly if logged in
+(function(){
+  try {
+    const t = localStorage.getItem('gc_token');
+    const u = localStorage.getItem('gc_user');
+    if(t && u) document.documentElement.classList.add('has-session');
+  } catch(e){}
+})();
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:#f0faf4;min-height:100vh;}
+
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem 1rem;background:#f0faf4;}
+.auth-card{background:#fff;border-radius:20px;box-shadow:0 4px 32px rgba(34,139,70,.10);width:100%;max-width:420px;padding:2.5rem 2rem 2rem;border:1px solid #c8edda;}
+.logo-row{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.logo-icon{width:40px;height:40px;background:#22c55e;border-radius:12px;display:flex;align-items:center;justify-content:center;}
+.logo-icon svg{width:22px;height:22px;display:block;}
+.logo-name{font-size:22px;font-weight:700;color:#166534;}
+.tagline{font-size:13px;color:#4ade80;font-weight:500;margin-bottom:1.75rem;margin-top:2px;}
+.pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:4px;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.stitle{font-size:17px;font-weight:700;color:#15803d;margin-bottom:1.25rem;}
+.fg{margin-bottom:1rem;}
+.fl{font-size:13px;font-weight:600;color:#166534;margin-bottom:5px;display:block;}
+.fi{width:100%;padding:10px 14px;border:1.5px solid #bbf7d0;border-radius:10px;font-size:14px;font-family:'Nunito',sans-serif;color:#166534;background:#f0fdf4;outline:none;transition:border-color .2s;}
+.fi:focus{border-color:#22c55e;background:#fff;}
+.fi::placeholder{color:#86efac;}
+.gr{display:flex;gap:10px;}
+.gb{flex:1;padding:10px 0;border:1.5px solid #bbf7d0;border-radius:10px;background:#f0fdf4;color:#15803d;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;font-family:'Nunito',sans-serif;}
+.gb.sel,.gb:hover{background:#22c55e;color:#fff;border-color:#22c55e;}
+.pbtn{width:100%;margin-top:.5rem;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:15px;font-weight:700;border:none;border-radius:12px;cursor:pointer;font-family:'Nunito',sans-serif;transition:opacity .18s,transform .12s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.pbtn:hover{opacity:.92;transform:scale(.99);}
+.pbtn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.divrow{display:flex;align-items:center;gap:10px;margin:1.25rem 0 1rem;}
+.divline{flex:1;height:1px;background:#d1fae5;}
+.divtxt{font-size:12px;color:#86efac;font-weight:600;}
+.lnkrow{text-align:center;font-size:14px;color:#4b5563;}
+.lnkrow a{color:#16a34a;font-weight:700;text-decoration:none;border-bottom:1.5px solid #86efac;cursor:pointer;}
+.errbx{display:none;color:#ef4444;font-size:12px;font-weight:600;margin-top:8px;padding:8px 12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;}
+.backl{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#16a34a;font-weight:600;cursor:pointer;margin-bottom:1.25rem;}
+
+/* CHAT LAYOUT */
+.chat-wrap{display:none;height:100vh;flex-direction:row;position:fixed;inset:0;z-index:500;background:#f0faf4;}
+.chat-wrap.active{display:flex;}
+.sidebar{width:260px;min-width:260px;background:#fff;border-right:1.5px solid #c8edda;display:flex;flex-direction:column;height:100vh;transition:transform .3s;z-index:10;}
+.sb-head{padding:14px 16px 10px;border-bottom:1px solid #d1fae5;}
+.sb-logo{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.sb-logo-ic{width:34px;height:34px;background:#22c55e;border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.sb-logo-ic svg{width:18px;height:18px;display:block;}
+.sb-logo-nm{font-size:18px;font-weight:700;color:#166534;}
+.tabs{display:flex;gap:6px;margin-bottom:10px;}
+.tbtn{flex:1;padding:7px 0;border-radius:10px;border:1.5px solid #bbf7d0;background:#f0fdf4;color:#166534;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s;}
+.tbtn.active{background:#22c55e;color:#fff;border-color:#22c55e;}
+.tbtn:hover:not(.active){background:#dcfce7;}
+.sb-search{width:100%;padding:8px 12px;border:1.5px solid #bbf7d0;border-radius:10px;font-size:13px;font-family:'Nunito',sans-serif;color:#166534;background:#f0fdf4;outline:none;}
+.sb-search::placeholder{color:#86efac;}
+.sb-sec{padding:8px 16px 4px;font-size:11px;font-weight:700;color:#86efac;letter-spacing:.8px;text-transform:uppercase;flex-shrink:0;}
+.ulist{flex:1;overflow-y:auto;padding:0 8px 8px;}
+.ulist::-webkit-scrollbar{width:4px;}
+.ulist::-webkit-scrollbar-thumb{background:#bbf7d0;border-radius:4px;}
+.uitem{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;transition:background .15s;margin-bottom:2px;}
+.uitem:hover,.uitem.active{background:#f0fdf4;}
+.uitem.active{background:#dcfce7;}
+.av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;position:relative;}
+.av.male{background:#dbeafe;color:#1d4ed8;}
+.av.female{background:#fce7f3;color:#be185d;}
+.av.pub{background:#dcfce7;color:#166534;}
+.av-dot{position:absolute;bottom:1px;right:1px;width:9px;height:9px;border-radius:50%;background:#22c55e;border:2px solid #fff;}
+.uinfo{flex:1;min-width:0;}
+.unm{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.unm.male{color:#1d4ed8;}
+.unm.female{color:#be185d;}
+.unm.room{color:#166534;}
+.ulast{font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.umeta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+.ubadge{background:#22c55e;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+
+/* CHAT AREA */
+.chat-area{flex:1;display:flex;flex-direction:column;min-width:0;}
+.chat-hdr{padding:12px 18px;background:#fff;border-bottom:1.5px solid #d1fae5;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.hburger{display:none;background:none;border:none;cursor:pointer;padding:4px;border-radius:8px;}
+.hburger svg{width:22px;height:22px;stroke:#166534;display:block;}
+.hav{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+.hav.male{background:#dbeafe;color:#1d4ed8;}
+.hav.female{background:#fce7f3;color:#be185d;}
+.hav.pub{background:#dcfce7;color:#166534;}
+.hinfo{flex:1;min-width:0;}
+.hnm{font-size:15px;font-weight:700;}
+.hnm.male{color:#1d4ed8;}
+.hnm.female{color:#be185d;}
+.hnm.pub{color:#166534;}
+.hst{font-size:12px;color:#22c55e;font-weight:500;}
+.hacts{display:flex;gap:8px;flex-shrink:0;}
+.hbtn{background:none;border:1.5px solid #bbf7d0;border-radius:10px;padding:6px 10px;cursor:pointer;color:#166534;font-size:12px;font-weight:600;font-family:'Nunito',sans-serif;transition:all .15s;white-space:nowrap;}
+.hbtn:hover{background:#dcfce7;}
+.hbtn.red{border-color:#fecaca;color:#ef4444;}
+.hbtn.red:hover{background:#fef2f2;}
+.pub-banner{background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-bottom:1px solid #86efac;padding:8px 18px;display:flex;align-items:center;gap:8px;font-size:12px;color:#166534;font-weight:600;flex-shrink:0;}
+.ldot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;animation:lp 1.2s infinite;}
+@keyframes lp{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.8);}}
+
+/* MESSAGES */
+.msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#f8fffe;}
+.msgs::-webkit-scrollbar{width:4px;}
+.msgs::-webkit-scrollbar-thumb{background:#bbf7d0;border-radius:4px;}
+.mrow{display:flex;gap:9px;align-items:flex-end;position:relative;}
+.mrow.me{flex-direction:row-reverse;}
+.mav{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.mav.male{background:#dbeafe;color:#1d4ed8;}
+.mav.female{background:#fce7f3;color:#be185d;}
+.mcnt{max-width:65%;display:flex;flex-direction:column;position:relative;}
+.mrow.me .mcnt{align-items:flex-end;}
+.mnm{font-size:11px;font-weight:700;margin-bottom:2px;padding-left:2px;}
+.mnm.male{color:#1d4ed8;}
+.mnm.female{color:#be185d;}
+.mbub{padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;word-break:break-word;position:relative;}
+.mrow:not(.me) .mbub{background:#fff;border:1px solid #d1fae5;color:#1f2937;border-bottom-left-radius:4px;}
+.mrow.me .mbub{background:#22c55e;color:#fff;border-bottom-right-radius:4px;}
+.mtime{font-size:10px;margin-top:3px;color:#9ca3af;padding:0 2px;display:flex;align-items:center;gap:6px;}
+
+/* Unsend button — appears on hover */
+.unsend-btn{
+  display:none;
+  background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:8px;
+  font-size:11px;font-weight:600;padding:3px 8px;cursor:pointer;
+  font-family:'Nunito',sans-serif;white-space:nowrap;
+}
+.mrow:hover .unsend-btn{display:inline-flex;align-items:center;gap:4px;}
+.unsent-placeholder{
+  font-size:13px;color:#9ca3af;font-style:italic;
+  padding:8px 14px;border-radius:12px;
+  background:#f3f4f6;border:1px dashed #d1d5db;
+  display:flex;align-items:center;gap:6px;
+}
+
+/* IMAGE in bubble */
+.img-in-bubble{
+  display:block;max-width:220px;max-height:220px;
+  border-radius:10px;margin-top:6px;cursor:pointer;
+  object-fit:cover;
+  -webkit-user-drag:none;user-select:none;
+}
+.img-in-bubble.protected{pointer-events:none;}
+/* Re-enable click on protected by wrapping */
+.img-click-wrap{display:inline-block;cursor:pointer;margin-top:6px;border-radius:10px;overflow:hidden;position:relative;}
+.img-click-wrap.protected{-webkit-user-select:none;user-select:none;}
+.img-click-wrap.protected img{pointer-events:none;-webkit-user-drag:none;}
+.burn-pill{
+  position:absolute;top:6px;right:6px;
+  background:rgba(0,0,0,.65);color:#fff;
+  font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;
+  display:flex;align-items:center;gap:3px;pointer-events:none;
+}
+.prot-pill{
+  position:absolute;bottom:6px;left:6px;
+  background:rgba(0,0,0,.6);color:#fff;
+  font-size:10px;padding:2px 6px;border-radius:20px;pointer-events:none;
+}
+.burned-msg{
+  display:flex;align-items:center;gap:6px;
+  font-size:13px;color:#9ca3af;font-style:italic;
+  padding:8px 12px;background:#f3f4f6;border-radius:10px;
+  border:1px dashed #d1d5db;margin-top:4px;
+}
+
+.divid{text-align:center;font-size:11px;color:#86efac;font-weight:600;padding:4px 0;position:relative;flex-shrink:0;}
+.divid::before,.divid::after{content:'';position:absolute;top:50%;width:28%;height:1px;background:#d1fae5;}
+.divid::before{left:5%;}
+.divid::after{right:5%;}
+.sysmsg{text-align:center;font-size:12px;color:#86efac;font-weight:600;padding:4px 12px;background:#f0fdf4;border-radius:20px;align-self:center;border:1px solid #d1fae5;}
+.typind{font-size:12px;color:#86efac;font-weight:600;padding:0 16px 4px;min-height:18px;flex-shrink:0;}
+
+/* INPUT */
+.inp-area{background:#fff;border-top:1.5px solid #d1fae5;padding:12px 16px;flex-shrink:0;}
+.img-settings{display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px 14px;margin-bottom:10px;gap:12px;flex-wrap:wrap;align-items:center;}
+.img-settings.show{display:flex;}
+.img-settings label{font-size:12px;font-weight:600;color:#166534;}
+.burn-sel{padding:5px 10px;border:1.5px solid #bbf7d0;border-radius:8px;font-size:12px;font-family:'Nunito',sans-serif;color:#166534;background:#fff;outline:none;cursor:pointer;}
+.prot-tog{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;color:#166534;padding:5px 10px;border:1.5px solid #bbf7d0;border-radius:8px;background:#fff;transition:all .15s;user-select:none;}
+.prot-tog.on{background:#22c55e;color:#fff;border-color:#22c55e;}
+.prev-bar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.prev-thumb{position:relative;display:inline-block;}
+.prev-thumb img{width:56px;height:56px;object-fit:cover;border-radius:10px;border:1.5px solid #86efac;display:block;}
+.prev-rm{position:absolute;top:-5px;right:-5px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:17px;height:17px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.inp-row{display:flex;gap:8px;align-items:flex-end;}
+.itxt{flex:1;padding:10px 14px;border:1.5px solid #bbf7d0;border-radius:12px;font-size:14px;font-family:'Nunito',sans-serif;color:#1f2937;background:#f0fdf4;outline:none;resize:none;max-height:100px;line-height:1.5;transition:border-color .2s;}
+.itxt:focus{border-color:#22c55e;background:#fff;}
+.itxt::placeholder{color:#86efac;}
+.imgbtn{width:44px;height:44px;min-width:44px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;padding:0;}
+.imgbtn:hover{background:#dcfce7;border-color:#22c55e;}
+.sndbtn{width:44px;height:44px;min-width:44px;background:#22c55e;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;}
+.sndbtn:hover{background:#16a34a;transform:scale(1.05);}
+#finput{display:none;}
+
+/* OVERLAY */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99;}
+
+/* ===== TELEGRAM-STYLE LIGHTBOX ===== */
+.lbx{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.95);z-index:9999;
+  flex-direction:column;align-items:center;justify-content:center;
+  gap:0;
+}
+.lbx.open{display:flex;}
+/* Top bar */
+.lbx-topbar{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;flex-shrink:0;
+}
+.lbx-sender{color:#fff;font-size:14px;font-weight:700;}
+.lbx-close-btn{
+  background:rgba(255,255,255,.15);border:none;color:#fff;
+  width:36px;height:36px;border-radius:50%;cursor:pointer;
+  font-size:18px;display:flex;align-items:center;justify-content:center;
+}
+.lbx-close-btn:hover{background:rgba(255,255,255,.25);}
+/* Image area */
+.lbx-img-area{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:0 20px;width:100%;min-height:0;
+}
+.lbx-img-area.protected{-webkit-user-select:none;user-select:none;}
+.lbx-img-area.protected img{pointer-events:none;-webkit-user-drag:none;}
+.lbx-img-area img{
+  max-width:100%;max-height:100%;
+  object-fit:contain;border-radius:8px;display:block;
+}
+/* Bottom bar — timer */
+.lbx-bottombar{
+  width:100%;padding:14px 20px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;gap:16px;
+}
+/* Circular countdown timer (Telegram style) */
+.burn-circle{position:relative;width:64px;height:64px;flex-shrink:0;}
+.burn-circle svg{transform:rotate(-90deg);}
+.burn-circle-track{fill:none;stroke:rgba(255,255,255,.2);stroke-width:4;}
+.burn-circle-prog{fill:none;stroke:#22c55e;stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .9s linear;}
+.burn-circle-num{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:16px;font-weight:700;
+}
+.lbx-burn-label{color:#fff;font-size:13px;font-weight:600;opacity:.8;}
+.lbx-prot-badge{
+  color:#4ade80;font-size:12px;font-weight:600;
+  display:flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.08);padding:5px 12px;border-radius:20px;
+}
+
+.burn-blur-wrap{position:relative;display:inline-block;border-radius:10px;overflow:hidden;margin-top:6px;}
+.burn-tap-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:rgba(0,0,0,0.35);border-radius:10px;cursor:pointer;}
+.burn-tap-icon{font-size:22px;}
+.burn-tap-label{color:#fff;font-size:12px;font-weight:700;background:rgba(0,0,0,.5);padding:3px 10px;border-radius:20px;}
+/* Screenshot alert toast */
+.room-del-btn{background:none;border:none;color:#ef4444;font-size:13px;cursor:pointer;padding:2px 5px;border-radius:6px;opacity:0;transition:opacity .15s;flex-shrink:0;}
+.uitem:hover .room-del-btn{opacity:1;}
+.room-del-btn:hover{background:#fef2f2;}
+.room-cd{font-size:10px;color:#f59e0b;font-weight:600;margin-top:2px;}
+/* Active highlight — stronger green */
+.uitem.active{background:#dcfce7 !important;border-left:3px solid #22c55e;}
+.msg-status{font-size:11px;margin-left:3px;opacity:0.8;}
+.msg-status.sent{color:rgba(255,255,255,0.6);}
+.msg-status.delivered{color:rgba(255,255,255,0.8);}
+.msg-status.seen{color:#4ade80;font-size:12px;}
+.ss-alert{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:#1f2937;color:#fff;font-size:13px;font-weight:600;
+  padding:10px 20px;border-radius:20px;z-index:99999;
+  animation:ssalert .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.3);
+  border:1px solid rgba(255,255,255,.1);
+  white-space:nowrap;
+}
+@keyframes ssalert{from{opacity:0;transform:translateX(-50%) translateY(10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+/* RESPONSIVE */
+@media(max-width:640px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:100;transform:translateX(-100%);width:82%;max-width:300px;box-shadow:4px 0 24px rgba(0,0,0,.13);}
+  .sidebar.open{transform:translateX(0);}
+  .hburger{display:flex;}
+  .ov.open{display:block;}
+  .hbtn span{display:none;}
+  .mcnt{max-width:82%;}
+}
+</style>
+<style>
+/* ===== LANDING PAGE ===== */
+.landing-wrap{min-height:100vh;background:linear-gradient(160deg,#f0fdf4 0%,#dcfce7 100%);position:relative;z-index:1;}
+.has-session #pg-landing{display:none!important;}
+.land-nav{max-width:1100px;margin:0 auto;padding:1.25rem 1.5rem;display:flex;align-items:center;justify-content:space-between;}
+.land-nav-logo{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800;color:#14532d;}
+.land-nav-logo .ni{width:36px;height:36px;background:#22c55e;border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.land-nav-logo .ni svg{width:20px;height:20px;display:block;}
+.land-nav-links{display:flex;gap:1rem;align-items:center;}
+.land-nav-links a{font-size:13px;font-weight:600;color:#166534;text-decoration:none;cursor:pointer;}
+.land-nav-links a:hover{color:#22c55e;}
+.hero-section{max-width:1100px;margin:0 auto;padding:2rem 1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:#dcfce7;border:1px solid #86efac;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:#166534;margin-bottom:1.25rem;}
+.hero-h1{font-size:2.4rem;font-weight:800;color:#14532d;line-height:1.2;margin-bottom:1rem;}
+.hero-h1 span{color:#22c55e;}
+.hero-p{font-size:15px;color:#4b7a55;line-height:1.7;margin-bottom:1.5rem;}
+.hero-stats{display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:2rem;}
+.hero-stat strong{display:block;font-size:1.4rem;font-weight:800;color:#166534;}
+.hero-stat span{font-size:12px;color:#6b9f7a;font-weight:600;}
+.hero-features{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1.5rem;}
+.hfeat{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(255,255,255,.8);border-radius:10px;border:1px solid #d1fae5;}
+.hfeat-icon{font-size:18px;flex-shrink:0;}
+.hfeat-text strong{display:block;font-size:12px;color:#166534;font-weight:700;}
+.hfeat-text span{font-size:11px;color:#6b9f7a;}
+.auth-card-wrap{background:#fff;border-radius:24px;box-shadow:0 8px 48px rgba(34,139,70,.13);border:1px solid #c8edda;padding:2rem 1.75rem;}
+.auth-tabs{display:flex;background:#f0fdf4;border-radius:12px;padding:4px;margin-bottom:1.5rem;gap:4px;}
+.auth-tab{flex:1;padding:8px 0;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;background:transparent;color:#166534;transition:all .15s;}
+.auth-tab.active{background:#22c55e;color:#fff;box-shadow:0 2px 8px rgba(34,197,94,.3);}
+
+.features-section{max-width:1100px;margin:0 auto;padding:3rem 1.5rem;}
+.features-section h2{text-align:center;font-size:1.8rem;font-weight:800;color:#14532d;margin-bottom:.5rem;}
+.fsub{text-align:center;color:#6b9f7a;font-size:14px;margin-bottom:2.5rem;}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;}
+.feat-card{background:#fff;border-radius:16px;padding:1.5rem;border:1px solid #d1fae5;text-align:center;}
+.feat-card .ficon{font-size:2rem;margin-bottom:.75rem;}
+.feat-card h3{font-size:15px;font-weight:700;color:#14532d;margin-bottom:.5rem;}
+.feat-card p{font-size:13px;color:#6b9f7a;line-height:1.6;}
+.how-section{background:#fff;padding:3rem 1.5rem;border-top:1px solid #d1fae5;border-bottom:1px solid #d1fae5;margin-top:1rem;}
+.how-inner{max-width:900px;margin:0 auto;text-align:center;}
+.how-inner h2{font-size:1.8rem;font-weight:800;color:#14532d;margin-bottom:.5rem;}
+.how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;margin-top:2rem;}
+.how-step .snum{width:40px;height:40px;background:#22c55e;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;margin:0 auto .75rem;}
+.how-step h3{font-size:14px;font-weight:700;color:#14532d;margin-bottom:.5rem;}
+.how-step p{font-size:13px;color:#6b9f7a;line-height:1.5;}
+.csel{width:100%;padding:10px 14px;border:1.5px solid #bbf7d0;border-radius:10px;font-size:14px;font-family:'Nunito',sans-serif;color:#166534;background:#f0fdf4;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;}
+.csel:focus{border-color:#22c55e;background:#fff;}
+.site-footer{background:#14532d;color:#fff;padding:2.5rem 1.5rem 1.5rem;}
+.footer-inner{max-width:1100px;margin:0 auto;}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr;gap:2rem;margin-bottom:2rem;}
+.footer-brand p{font-size:13px;color:#86efac;line-height:1.6;margin-top:.5rem;}
+.footer-col h4{font-size:13px;font-weight:700;color:#4ade80;margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.5px;}
+.footer-col a{display:block;font-size:13px;color:#86efac;text-decoration:none;margin-bottom:.4rem;cursor:pointer;}
+.footer-col a:hover{color:#fff;}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;}
+.footer-bottom p{font-size:12px;color:#4ade80;opacity:.7;}
+.footer-bottom-links{display:flex;gap:1rem;}
+.footer-bottom-links a{font-size:12px;color:#4ade80;opacity:.7;text-decoration:none;cursor:pointer;}
+/* Static content pages */
+.content-page{display:none;min-height:100vh;background:#f0faf4;}
+.content-page.active{display:block;}
+.content-wrap{max-width:800px;margin:0 auto;padding:3rem 1.5rem;}
+.content-wrap h1{font-size:2rem;font-weight:800;color:#14532d;margin-bottom:.5rem;}
+.content-wrap .updated{font-size:13px;color:#86efac;margin-bottom:2rem;}
+.content-wrap h2{font-size:1.2rem;font-weight:700;color:#166534;margin:2rem 0 .75rem;}
+.content-wrap p{font-size:14px;color:#374151;line-height:1.8;margin-bottom:1rem;}
+.content-wrap ul{font-size:14px;color:#374151;line-height:1.8;margin-bottom:1rem;padding-left:1.5rem;}
+.content-wrap ul li{margin-bottom:.4rem;}
+@media(max-width:768px){
+  .hero-section{grid-template-columns:1fr;gap:2rem;}
+  .features-grid{grid-template-columns:1fr 1fr;}
+  .how-steps{grid-template-columns:1fr;gap:1rem;}
+  .hero-h1{font-size:1.8rem;}
+  .footer-top{grid-template-columns:1fr 1fr;}
+  .land-nav-links{gap:.5rem;}
+}
+@media(max-width:480px){
+  .features-grid{grid-template-columns:1fr;}
+  .hero-features{grid-template-columns:1fr;}
+  .footer-top{grid-template-columns:1fr;}
+}
+
+.custom-select-wrap{position:relative;}
+.csel-display{transition:border-color .2s;}
+.csel-display:hover{border-color:#22c55e!important;background:#fff!important;}
+.country-drop::-webkit-scrollbar{width:4px;}
+.country-drop::-webkit-scrollbar-thumb{background:#bbf7d0;border-radius:4px;}
+.country-opt{padding:9px 14px;cursor:pointer;font-size:13px;color:#166534;display:flex;align-items:center;gap:8px;transition:background .1s;}
+.country-opt:hover{background:#f0fdf4;}
+.country-opt .cflag{font-size:18px;line-height:1;width:24px;text-align:center;}
+.country-opt .cname{font-weight:600;}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     LANDING PAGE
+============================================================ -->
+<div id="pg-landing" class="landing-wrap">
+  <!-- NAV -->
+  <nav class="land-nav">
+    <div class="land-nav-logo">
+      <div class="ni"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#22c55e"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Arial,sans-serif" font-weight="900" font-size="19" fill="white">GC</text></svg></div>
+      GreenChatz
+    </div>
+    <div class="land-nav-links">
+      <a onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Features</a>
+      <a onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">How it works</a>
+      <a onclick="showPage('pg-privacy')">Privacy</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero-section">
+    <div class="hero-left">
+      <div class="hero-badge"><span class="pulse"></span> <span id="landing-online">Join the chat</span></div>
+      <h1 class="hero-h1">Chat Freely with People <span>Around the World</span></h1>
+      <p class="hero-p">GreenChatz is a <strong>completely free, no-registration</strong> chat platform. Just pick a username and start chatting instantly. Meet people from 60+ countries — no email, no password, no download needed.</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><strong>60+</strong><span>Countries</span></div>
+        <div class="hero-stat"><strong>Free</strong><span>Forever</span></div>
+        <div class="hero-stat"><strong>Secure</strong><span>Auto-delete</span></div>
+        <div class="hero-stat"><strong>100%</strong><span>No signup</span></div>
+      </div>
+      <div class="hero-features">
+        <div class="hfeat"><div class="hfeat-icon">🔒</div><div class="hfeat-text"><strong>Private Messages</strong><span>End-to-end secure 1-on-1 chat</span></div></div>
+        <div class="hfeat"><div class="hfeat-icon">🌐</div><div class="hfeat-text"><strong>Public Rooms</strong><span>Join or create chat rooms</span></div></div>
+        <div class="hfeat"><div class="hfeat-icon">🔥</div><div class="hfeat-text"><strong>Auto-delete Photos</strong><span>Images disappear after viewing</span></div></div>
+        <div class="hfeat"><div class="hfeat-icon">🛡</div><div class="hfeat-text"><strong>Screenshot Protection</strong><span>Protect your private images</span></div></div>
+        <div class="hfeat"><div class="hfeat-icon">📍</div><div class="hfeat-text"><strong>Country Flags</strong><span>See where people are from</span></div></div>
+        <div class="hfeat"><div class="hfeat-icon">✓✓</div><div class="hfeat-text"><strong>Read Receipts</strong><span>Know when messages are seen</span></div></div>
+      </div>
+    </div>
+
+    <!-- AUTH CARD -->
+    <div class="hero-right">
+      <div class="auth-card-wrap">
+        <div class="trust-bar" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:1.25rem;font-size:12px;color:#4b7a55;font-weight:600;">
+          <span class="pulse"></span> Join the conversation — it's free
+        </div>
+
+        <!-- Guest-only chat system -->
+        <div style="text-align:center;margin-bottom:1.25rem;">
+          <div style="font-size:15px;font-weight:700;color:#15803d;margin-bottom:4px;">🚀 Start Chatting Instantly</div>
+          <div style="font-size:12px;color:#86efac;">No registration required · 100% Free</div>
+        </div>
+
+        <!-- GUEST / START CHAT -->
+        <div id="af-guest">
+          <div class="fg"><label class="fl">Username</label><input class="fi" id="l-u" type="text" placeholder="Choose a display name"/></div>
+          <div class="fg"><label class="fl">Age</label><input class="fi" id="l-a" type="number" placeholder="Your age" min="13" max="99"/></div>
+          <div class="fg"><label class="fl">Gender</label><div class="gr"><button class="gb" id="l-m" onclick="sg('l','male')">♂ Male</button><button class="gb" id="l-f" onclick="sg('l','female')">♀ Female</button></div></div>
+                    <input type="hidden" id="l-country" value=""/>
+            </div>
+          </div>
+          <div class="fg">
+            <label class="fl">Country</label>
+            <div onclick="openCountryPick()" id="country-selected" style="width:100%;padding:10px 14px;border:1.5px solid #bbf7d0;border-radius:10px;font-size:14px;font-family:'Nunito',sans-serif;background:#f0fdf4;cursor:pointer;display:flex;align-items:center;gap:10px;transition:border-color .2s;box-sizing:border-box;" onmouseover="this.style.borderColor='#22c55e';this.style.background='#fff'" onmouseout="this.style.borderColor='#bbf7d0';this.style.background='#f0fdf4'">
+              <span id="country-flag-preview"></span>
+              <span id="country-name-preview" style="color:#86efac;font-size:14px;font-weight:500;">🌍 Select your country</span>
+              <svg style="margin-left:auto;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#86efac" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <input type="hidden" id="l-country" value=""/>
+          </div>
+          <div class="errbx" id="l-e"></div>
+          <button class="pbtn" id="l-btn" onclick="doGuest()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="white" style="display:block;pointer-events:none;"><path d="M13 3L4 14h7l-1 7 9-11h-7z"/></svg>
+            Start Chat Now
+          </button>
+          <p style="text-align:center;font-size:11px;color:#9ca3af;margin-top:.75rem;">By chatting you agree to our <a onclick="showPage('pg-terms')" style="color:#16a34a;cursor:pointer;">Terms</a> &amp; <a onclick="showPage('pg-privacy')" style="color:#16a34a;cursor:pointer;">Privacy Policy</a></p>
+        </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features-section" id="features">
+    <h2>Everything You Need to Chat</h2>
+    <p class="fsub">GreenChatz is packed with features designed for privacy, fun, and connection.</p>
+    <div class="features-grid">
+      <div class="feat-card"><div class="ficon">💬</div><h3>Realtime Messaging</h3><p>Messages appear instantly using WebSocket technology. No page refresh needed — just type and send.</p></div>
+      <div class="feat-card"><div class="ficon">🔥</div><h3>Burn-After-View Photos</h3><p>Send photos that auto-delete after 5 seconds to 10 minutes. Perfect for private image sharing.</p></div>
+      <div class="feat-card"><div class="ficon">🌐</div><h3>Public Chat Rooms</h3><p>Join the main Public room or create your own custom room with optional password protection. No account needed.</p></div>
+      <div class="feat-card"><div class="ficon">🛡</div><h3>Screenshot Protection</h3><p>Enable screenshot protection on sensitive images. Recipients are notified if someone takes a screenshot.</p></div>
+      <div class="feat-card"><div class="ficon">🌍</div><h3>Country Flags</h3><p>See where everyone is from with country flags next to usernames. Meet people from 70+ countries.</p></div>
+      <div class="feat-card"><div class="ficon">✓✓</div><h3>Read Receipts</h3><p>Know exactly when your message was sent, delivered, and seen with our 3-tier status system.</p></div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section" id="how">
+    <div class="how-inner">
+      <h2>Start Chatting in 3 Simple Steps</h2>
+      <p style="color:#6b9f7a;font-size:14px;">No app download required. Works on any device.</p>
+      <div class="how-steps">
+        <div class="how-step"><div class="snum">1</div><h3>Choose a Username</h3><p>Pick a display name, select your country and gender. No email required for guest access.</p></div>
+        <div class="how-step"><div class="snum">2</div><h3>Join a Room or Chat Privately</h3><p>Enter the Public room, explore custom rooms, or click on any online user to start a private conversation.</p></div>
+        <div class="how-step"><div class="snum">3</div><h3>Chat Freely &amp; Securely</h3><p>Send messages, share photos with auto-delete timers, and enjoy private conversations with full security features.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div style="display:flex;align-items:center;gap:8px;font-size:18px;font-weight:800;color:#fff;margin-bottom:.5rem;">
+            <div style="width:32px;height:32px;background:#22c55e;border-radius:8px;display:flex;align-items:center;justify-content:center;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#22c55e"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Arial,sans-serif" font-weight="900" font-size="19" fill="white">GC</text></svg></div>
+            GreenChat
+          </div>
+          <p>Free realtime chat for everyone. Connect with people from around the world instantly and securely.</p>
+        </div>
+        <div class="footer-col">
+          <h4>GreenChatz</h4>
+          <a onclick="document.getElementById('l-u').focus()">Start Chatting</a>
+          <a onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Features</a>
+          <a onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">How it Works</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a onclick="showPage('pg-privacy')">Privacy Policy</a>
+          <a onclick="showPage('pg-terms')">Terms of Service</a>
+          <a onclick="showPage('pg-about')">About Us</a>
+          <a onclick="showPage('pg-contact')">Contact</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2025 GreenChatz. All rights reserved.</p>
+        <div class="footer-bottom-links"><a onclick="showPage('pg-privacy')">Privacy</a><a onclick="showPage('pg-terms')">Terms</a><a onclick="showPage('pg-about')">About</a><a onclick="showPage('pg-contact')">Contact</a></div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- ============================================================
+     STATIC CONTENT PAGES
+============================================================ -->
+<!-- PRIVACY -->
+<div id="pg-privacy" class="content-page">
+  <nav class="land-nav" style="background:#fff;border-bottom:1px solid #d1fae5;position:sticky;top:0;z-index:10;">
+    <div class="land-nav-logo"><div class="ni"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#22c55e"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Arial,sans-serif" font-weight="900" font-size="19" fill="white">GC</text></svg></div>GreenChatz</div>
+    <a onclick="showPage('pg-landing')" style="font-size:13px;font-weight:600;color:#16a34a;cursor:pointer;">← Back</a>
+  </nav>
+  <div class="content-wrap">
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: January 2025</p>
+    <p>At GreenChat, your privacy is our priority. This Privacy Policy explains what information we collect, how we use it, and how we protect it.</p>
+    <h2>Information We Collect</h2>
+    <p>When you use GreenChat, we collect the following:</p>
+    <ul>
+      <li><strong>Account information:</strong> Username, email address (for registered users), age, gender, and country.</li>
+      <li><strong>Messages:</strong> Chat messages are stored in our database to enable conversation history. Guest sessions are cleared on logout.</li>
+      <li><strong>Images:</strong> Photos shared in chat are stored temporarily. Images with auto-delete timers are permanently removed from our servers after the timer expires.</li>
+      <li><strong>Usage data:</strong> We may collect basic usage statistics to improve the service.</li>
+    </ul>
+    <h2>How We Use Your Information</h2>
+    <ul>
+      <li>To provide and operate the GreenChat service</li>
+      <li>To authenticate your account and maintain security</li>
+      <li>To deliver messages to other users in real time</li>
+      <li>To improve our platform and fix bugs</li>
+    </ul>
+    <h2>Data Retention</h2>
+    <p>Guest user data and all associated messages are deleted when the user logs out. Registered user data is retained until account deletion is requested. Images with burn timers are deleted from our servers immediately after the timer expires.</p>
+    <h2>Security</h2>
+    <p>We use industry-standard security measures including password hashing (bcrypt), JWT authentication tokens, and HTTPS encryption to protect your data.</p>
+    <h2>Third Parties</h2>
+    <p>GreenChat does not sell, trade, or share your personal information with third parties for marketing purposes. We do not display advertisements.</p>
+    <h2>Your Rights</h2>
+    <p>You have the right to access, correct, or delete your personal data at any time. Contact us at privacy@greenchatz.com to exercise these rights.</p>
+    <h2>Contact</h2>
+    <p>For privacy-related questions, email us at <strong>privacy@greenchatz.com</strong>.</p>
+  </div>
+</div>
+
+<!-- TERMS -->
+<div id="pg-terms" class="content-page">
+  <nav class="land-nav" style="background:#fff;border-bottom:1px solid #d1fae5;position:sticky;top:0;z-index:10;">
+    <div class="land-nav-logo"><div class="ni"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#22c55e"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Arial,sans-serif" font-weight="900" font-size="19" fill="white">GC</text></svg></div>GreenChatz</div>
+    <a onclick="showPage('pg-landing')" style="font-size:13px;font-weight:600;color:#16a34a;cursor:pointer;">← Back</a>
+  </nav>
+  <div class="content-wrap">
+    <h1>Terms of Service</h1>
+    <p class="updated">Last updated: January 2025</p>
+    <p>Welcome to GreenChat. By using our platform, you agree to these Terms of Service. Please read them carefully.</p>
+    <h2>Eligibility</h2>
+    <p>You must be at least 13 years old to use GreenChat. By using the service, you confirm that you meet this age requirement.</p>
+    <h2>Acceptable Use</h2>
+    <p>You agree NOT to use GreenChat to:</p>
+    <ul>
+      <li>Share illegal content, including child exploitation material</li>
+      <li>Harass, threaten, or abuse other users</li>
+      <li>Spam or send unsolicited messages</li>
+      <li>Attempt to hack, disrupt, or damage the service</li>
+      <li>Impersonate other users or individuals</li>
+      <li>Share content that violates any applicable law</li>
+    </ul>
+    <h2>User Content</h2>
+    <p>You retain ownership of content you post on GreenChat. By posting, you grant GreenChat a limited license to store and transmit your content to deliver the service. We do not claim ownership of your messages or images.</p>
+    <h2>Account Termination</h2>
+    <p>We reserve the right to suspend or terminate accounts that violate these terms without prior notice.</p>
+    <h2>Disclaimer</h2>
+    <p>GreenChat is provided "as is" without warranties of any kind. We are not liable for any damages resulting from your use of the service.</p>
+    <h2>Changes to Terms</h2>
+    <p>We may update these terms from time to time. Continued use of GreenChat after changes constitutes acceptance of the new terms.</p>
+    <h2>Contact</h2>
+    <p>For questions about these terms, contact us at <strong>legal@greenchatz.com</strong>.</p>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<div id="pg-about" class="content-page">
+  <nav class="land-nav" style="background:#fff;border-bottom:1px solid #d1fae5;position:sticky;top:0;z-index:10;">
+    <div class="land-nav-logo"><div class="ni"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#22c55e"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Arial,sans-serif" font-weight="900" font-size="19" fill="white">GC</text></svg></div>GreenChatz</div>
+    <a onclick="showPage('pg-landing')" style="font-size:13px;font-weight:600;color:#16a34a;cursor:pointer;">← Back</a>
+  </nav>
+  <div class="content-wrap">
+    <h1>About GreenChat</h1>
+    <p class="updated">Connecting people since 2025</p>
+    <p>GreenChatz is a free, real-time chat platform built for people who value both connection and privacy. We believe that online communication should be fast, secure, and accessible to everyone — regardless of location or device.</p>
+    <h2>Our Mission</h2>
+    <p>To build the most secure and user-friendly free chat platform on the internet. We focus on features that matter: instant messaging, private conversations, photo sharing with automatic deletion, and a global community of users from 70+ countries.</p>
+    <h2>What Makes Us Different</h2>
+    <ul>
+      <li><strong>No ads:</strong> GreenChat is completely ad-free. Your conversations are private.</li>
+      <li><strong>Auto-delete photos:</strong> Share images that automatically disappear after viewing — like they were never there.</li>
+      <li><strong>Screenshot protection:</strong> We alert users when someone takes a screenshot of protected images.</li>
+      <li><strong>Guest access:</strong> No email required. Start chatting instantly.</li>
+      <li><strong>Open rooms:</strong> Create custom chat rooms with optional password protection.</li>
+    </ul>
+    <h2>Technology</h2>
+    <p>GreenChat is built with Node.js, Express, Socket.io for real-time communication, and MongoDB for data storage. Our platform runs securely with JWT authentication and bcrypt password hashing.</p>
+    <h2>Contact Us</h2>
+    <p>We'd love to hear from you. Reach out at <strong>hello@greenchatz.com</strong> for any feedback, bug reports, or partnership inquiries.</p>
+  </div>
+</div>
+
+<!-- CONTACT -->
+<div id="pg-contact" class="content-page">
+  <nav class="land-nav" style="background:#fff;border-bottom:1px solid #d1fae5;position:sticky;top:0;z-index:10;">
+    <div class="land-nav-logo"><div class="ni"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#22c55e"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Arial,sans-serif" font-weight="900" font-size="19" fill="white">GC</text></svg></div>GreenChatz</div>
+    <a onclick="showPage('pg-landing')" style="font-size:13px;font-weight:600;color:#16a34a;cursor:pointer;">← Back</a>
+  </nav>
+  <div class="content-wrap">
+    <h1>Contact Us</h1>
+    <p class="updated">We typically respond within 24 hours</p>
+    <p>Have a question, found a bug, or want to suggest a feature? We'd love to hear from you.</p>
+    <h2>General Inquiries</h2>
+    <p>Email: <strong>hello@greenchatz.com</strong></p>
+    <h2>Privacy &amp; Data Requests</h2>
+    <p>Email: <strong>privacy@greenchatz.com</strong></p>
+    <h2>Legal</h2>
+    <p>Email: <strong>legal@greenchatz.com</strong></p>
+    <h2>Report Abuse</h2>
+    <p>If you encounter harassment, illegal content, or abuse on GreenChat, please email: <strong>abuse@greenchatz.com</strong></p>
+    <p>We take all reports seriously and aim to respond within 24 hours.</p>
+    <h2>Feature Requests &amp; Feedback</h2>
+    <p>We love hearing from our community. Send your ideas and feedback to <strong>feedback@greenchatz.com</strong> and we'll consider them for future updates.</p>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div id="pg-chat" class="chat-wrap">
+  <div class="ov" id="ov" onclick="closeSB()"></div>
+  <div class="sidebar" id="sb">
+    <div class="sb-head">
+      <div class="sb-logo"><div class="sb-logo-ic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#22c55e"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Arial,sans-serif" font-weight="900" font-size="19" fill="white">GC</text></svg></div><span class="sb-logo-nm">GreenChatz</span></div>
+      <div class="tabs">
+        <button class="tbtn active" id="tab-priv" onclick="switchTab('private')">🔒 Private</button>
+        <button class="tbtn" id="tab-pub" onclick="switchTab('public')">🌐 Public</button>
+      </div>
+      <input class="sb-search" type="text" placeholder="Search..." oninput="filterList(this.value)"/>
+    </div>
+    <div class="sb-sec" id="sb-lbl">Online — <span id="oc">0</span></div>
+    <div class="ulist" id="ulist"></div>
+  </div>
+
+  <div class="chat-area">
+    <div class="chat-hdr">
+      <button class="hburger" onclick="openSB()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      <div class="hav male" id="hav">GC</div>
+      <div class="hinfo"><div class="hnm male" id="hnm">Select a user</div><div class="hst" id="hst">Connecting...</div></div>
+      <div class="hacts"><button class="hbtn red" onclick="doLogout()">⬅ <span>Logout</span></button></div>
+    </div>
+    <div class="pub-banner" id="pub-banner" style="display:none;"><div class="ldot"></div>Public Room · Everyone can see messages<span style="opacity:.7;font-weight:400;">· Be respectful 🙏</span></div>
+    <div class="msgs" id="msgs"><div class="sysmsg">👋 Select a user or room to start</div></div>
+    <div class="typind" id="typind"></div>
+    <div class="inp-area">
+      <div class="img-settings" id="img-settings">
+        <label>🔥 Auto-delete:</label>
+        <select class="burn-sel" id="burn-sel">
+          <option value="">Off</option>
+          <option value="5">5 seconds</option>
+          <option value="10">10 seconds</option>
+          <option value="15">15 seconds</option>
+          <option value="30">30 seconds</option>
+          <option value="60">1 minute</option>
+          <option value="300">5 minutes</option>
+          <option value="600">10 minutes</option>
+        </select>
+        <div class="prot-tog" id="prot-tog" onclick="toggleProt()">
+          🛡 Screenshot: <strong id="prot-lbl">OFF</strong>
+        </div>
+      </div>
+      <div class="prev-bar" id="prev-bar"></div>
+      <div class="inp-row">
+        <button class="imgbtn" onclick="document.getElementById('finput').click()" title="Send image">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;pointer-events:none;"><rect x="3" y="3" width="18" height="18" rx="3" ry="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <input type="file" id="finput" accept="image/*" multiple onchange="handleFiles(this)"/>
+        <textarea class="itxt" id="msginput" rows="1" placeholder="Type a message..." onkeydown="handleKey(event)" oninput="onType(this)"></textarea>
+        <button class="sndbtn" onclick="sendMsg()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="#ffffff" style="display:block;pointer-events:none;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TELEGRAM-STYLE LIGHTBOX -->
+<div class="lbx" id="lbx">
+  <div class="lbx-topbar">
+    <div class="lbx-sender" id="lbx-sender"></div>
+    <button class="lbx-close-btn" onclick="closeLbx()">✕</button>
+  </div>
+  <div class="lbx-img-area" id="lbx-img-area">
+    <img id="lbx-img" src="" alt=""/>
+  </div>
+  <div class="lbx-bottombar" id="lbx-bottombar" style="display:none;">
+    <div class="burn-circle" id="burn-circle">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle class="burn-circle-track" cx="32" cy="32" r="28"/>
+        <circle class="burn-circle-prog" id="burn-prog" cx="32" cy="32" r="28"
+          stroke-dasharray="175.93" stroke-dashoffset="0"/>
+      </svg>
+      <div class="burn-circle-num" id="burn-num">—</div>
+    </div>
+    <div>
+      <div class="lbx-burn-label">🔥 Auto-deletes after viewing</div>
+      <div class="lbx-prot-badge" id="lbx-prot" style="display:none;">🛡 Screenshot Protected</div>
+    </div>
+  </div>
+</div>
+<script>
+const COUNTRY_MAP={"AF":["🇦🇫","Afghanistan"],"AL":["🇦🇱","Albania"],"DZ":["🇩🇿","Algeria"],"AR":["🇦🇷","Argentina"],"AU":["🇦🇺","Australia"],"AT":["🇦🇹","Austria"],"BD":["🇧🇩","Bangladesh"],"BE":["🇧🇪","Belgium"],"BR":["🇧🇷","Brazil"],"CA":["🇨🇦","Canada"],"CN":["🇨🇳","China"],"CO":["🇨🇴","Colombia"],"DK":["🇩🇰","Denmark"],"EG":["🇪🇬","Egypt"],"FI":["🇫🇮","Finland"],"FR":["🇫🇷","France"],"DE":["🇩🇪","Germany"],"GH":["🇬🇭","Ghana"],"GR":["🇬🇷","Greece"],"HU":["🇭🇺","Hungary"],"IN":["🇮🇳","India"],"ID":["🇮🇩","Indonesia"],"IR":["🇮🇷","Iran"],"IE":["🇮🇪","Ireland"],"IT":["🇮🇹","Italy"],"JP":["🇯🇵","Japan"],"JO":["🇯🇴","Jordan"],"KE":["🇰🇪","Kenya"],"KR":["🇰🇷","South Korea"],"KW":["🇰🇼","Kuwait"],"LB":["🇱🇧","Lebanon"],"MY":["🇲🇾","Malaysia"],"MX":["🇲🇽","Mexico"],"MA":["🇲🇦","Morocco"],"NL":["🇳🇱","Netherlands"],"NZ":["🇳🇿","New Zealand"],"NG":["🇳🇬","Nigeria"],"NO":["🇳🇴","Norway"],"PK":["🇵🇰","Pakistan"],"PH":["🇵🇭","Philippines"],"PL":["🇵🇱","Poland"],"PT":["🇵🇹","Portugal"],"QA":["🇶🇦","Qatar"],"RO":["🇷🇴","Romania"],"RU":["🇷🇺","Russia"],"SA":["🇸🇦","Saudi Arabia"],"SG":["🇸🇬","Singapore"],"ZA":["🇿🇦","South Africa"],"ES":["🇪🇸","Spain"],"LK":["🇱🇰","Sri Lanka"],"SE":["🇸🇪","Sweden"],"CH":["🇨🇭","Switzerland"],"TW":["🇹🇼","Taiwan"],"TH":["🇹🇭","Thailand"],"TR":["🇹🇷","Turkey"],"UA":["🇺🇦","Ukraine"],"AE":["🇦🇪","UAE"],"GB":["🇬🇧","United Kingdom"],"US":["🇺🇸","United States"],"VN":["🇻🇳","Vietnam"],"YE":["🇾🇪","Yemen"]};
+function getFlag(code){
+  if(!code) return '';
+  const cc = code.toLowerCase();
+  return '<img src="https://flagcdn.com/16x12/'+cc+'.png" width="16" height="12" alt="'+code+'" style="vertical-align:middle;margin-left:4px;border-radius:1px;" loading="lazy" onerror="this.remove()"/>';
+}
+
+/* ================================================================
+   STATE
+================================================================ */
+const API = '';
+let token   = localStorage.getItem('gc_token');
+let me      = JSON.parse(localStorage.getItem('gc_user') || 'null');
+let socket  = null;
+let curTab  = 'private';
+let activePriv  = null;
+let activePub   = null;
+let onlineUsers = [];
+let pendingFiles= [];
+let protectOn   = false;
+let typTimer    = null;
+
+// lightbox state
+let lbxMsgId   = null;
+let lbxBurnSec = 0;
+let lbxProtect = false;
+let lbxIv      = null;
+let lbxLeft    = 0;
+
+// pubRooms is now dynamic — fetched from server + custom rooms
+const defaultRooms = [
+  {id:'public', name:'Public', initials:'PB', locked:false, isDefault:true},
+];
+let pubRooms = [...defaultRooms];
+// roomCountdowns: {roomId: {expiresAt, intervalId}}
+const roomCountdowns = {};
+const privMsgs = {};
+const pubMsgs  = {public:[]};
+const gState   = {};
+
+/* ================================================================
+   PAGE NAV
+================================================================ */
+function showPg(id){ showPage(id); } // alias
+
+function showPage(id){
+  const allPages = ['pg-landing','pg-privacy','pg-terms','pg-about','pg-contact','pg-chat'];
+  allPages.forEach(p=>{
+    const el=document.getElementById(p);
+    if(!el) return;
+    el.style.display='none';
+    el.classList.remove('active');
+  });
+  const target=document.getElementById(id);
+  if(!target) return;
+  if(id==='pg-chat'){
+    document.body.style.overflow='hidden'; // chat uses full viewport, no scroll
+    target.classList.add('active');
+    target.style.display='flex';
+  } else {
+    document.body.style.overflow=''; // landing/content pages scroll normally
+    target.classList.remove('active');
+    target.style.display='block';
+    window.scrollTo(0,0);
+  }
+}
+
+function authTab(tab){ /* guest-only mode, no tabs */ }
+
+function sg(pfx,g){
+  gState[pfx]=g;
+  const mBtn=document.getElementById(pfx+'-m');
+  const fBtn=document.getElementById(pfx+'-f');
+  if(g==='male'){
+    mBtn.style.cssText='flex:1;padding:10px 0;border:2px solid #22c55e;border-radius:10px;background:#22c55e;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Nunito,sans-serif;';
+    fBtn.style.cssText='flex:1;padding:10px 0;border:1.5px solid #bbf7d0;border-radius:10px;background:#f0fdf4;color:#15803d;font-size:13px;font-weight:600;cursor:pointer;font-family:Nunito,sans-serif;';
+  } else {
+    fBtn.style.cssText='flex:1;padding:10px 0;border:2px solid #22c55e;border-radius:10px;background:#22c55e;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:Nunito,sans-serif;';
+    mBtn.style.cssText='flex:1;padding:10px 0;border:1.5px solid #bbf7d0;border-radius:10px;background:#f0fdf4;color:#15803d;font-size:13px;font-weight:600;cursor:pointer;font-family:Nunito,sans-serif;';
+  }
+}
+function err(id,msg){ const e=document.getElementById(id); e.textContent=msg; e.style.display='block'; }
+function noerr(id){ document.getElementById(id).style.display='none'; }
+
+/* ================================================================
+   AUTH
+================================================================ */
+async function doGuest(){
+  noerr('l-e');
+  const u=document.getElementById('l-u').value.trim(), a=document.getElementById('l-a').value.trim(), g=gState['l'];
+    const country = document.getElementById('l-country').value || '';
+  
+  if(!u||!a||!g) return err('l-e','Fill all fields & select gender.');
+  const btn=document.getElementById('l-btn'); btn.disabled=true; btn.textContent='Connecting...';
+  try{
+    const r=await fetch('/api/auth/guest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,age:+a,gender:g,country})});
+    const d=await r.json(); if(!r.ok) throw new Error(d.error);
+    saveAuth(d.token,d.user); initChat();
+  }catch(e){ err('l-e',e.message); }
+  finally{ btn.disabled=false; btn.textContent='Guest Login'; }
+}
+async function doLogin(){ console.log('Login disabled in guest-only mode'); return;
+  // DISABLED
+  noerr('pw-e');
+  const u=document.getElementById('pw-u').value.trim(), p=document.getElementById('pw-p').value;
+  if(!u||!p) return err('pw-e','Enter username & password.');
+  const btn=document.getElementById('pw-btn'); btn.disabled=true; btn.textContent='Logging in...';
+  try{
+    const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json(); if(!r.ok) throw new Error(d.error);
+    saveAuth(d.token,d.user); initChat();
+  }catch(e){ err('pw-e',e.message); }
+  finally{ btn.disabled=false; btn.textContent='Login'; }
+}
+async function doRegister(){ console.log('Register disabled in guest-only mode'); return;
+  // DISABLED
+  noerr('r-e');
+  const fn=document.getElementById('r-fn').value.trim(), u=document.getElementById('r-u').value.trim();
+  const em=document.getElementById('r-em').value.trim(), pw=document.getElementById('r-pw').value;
+  const ag=document.getElementById('r-age').value.trim(), g=gState['r'];
+  const rc=document.getElementById('r-country').value;
+  if(!u||!em||!pw||!ag||!g) return err('r-e','Fill all fields.');
+  const btn=document.getElementById('r-btn'); btn.disabled=true; btn.textContent='Creating...';
+  try{
+    const r=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fullName:fn,username:u,email:em,password:pw,age:+ag,gender:g,country:rc})});
+    const d=await r.json(); if(!r.ok) throw new Error(d.error);
+    saveAuth(d.token,d.user); initChat();
+  }catch(e){ err('r-e',e.message); }
+  finally{ btn.disabled=false; btn.textContent='Create Account →'; }
+}
+function saveAuth(t,u){ token=t; me=u; localStorage.setItem('gc_token',t); localStorage.setItem('gc_user',JSON.stringify(u)); }
+async function doLogout(){
+  if(!confirm('Logout and clear all your chat history?')) return;
+  // Tell server to clear history
+  try{
+    await fetch('/api/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+token}});
+  }catch(e){}
+  if(socket) socket.disconnect();
+  localStorage.removeItem('gc_token'); localStorage.removeItem('gc_user');
+  token=null; me=null;
+  document.documentElement.classList.remove('has-session');
+  showPage('pg-landing');
+}
+
+/* ================================================================
+   INIT + SOCKET
+================================================================ */
+/* ---- ROOM DELETE ---- */
+async function deleteRoom(e, roomId){
+  e.stopPropagation();
+  if(!confirm('Delete this room and all its messages?')) return;
+  try{
+    const r=await fetch('/api/rooms/'+roomId,{method:'DELETE',headers:{Authorization:'Bearer '+token}});
+    const d=await r.json(); if(!r.ok) throw new Error(d.error);
+    // Remove locally
+    const idx=pubRooms.findIndex(x=>x.id===roomId);
+    if(idx>=0) pubRooms.splice(idx,1);
+    if(!pubMsgs[roomId]) delete pubMsgs[roomId];
+    if(activePub?.id===roomId){
+      activePub=pubRooms.find(r=>r.isDefault)||pubRooms[0];
+      if(activePub){ updatePubHdr(activePub); loadPubHist(activePub.id); renderMsgs(); }
+    }
+    // Clear countdown
+    if(roomCountdowns[roomId]){
+      clearInterval(roomCountdowns[roomId].iv);
+      delete roomCountdowns[roomId];
+    }
+    renderPubList(pubRooms);
+    socket?.emit('room:deleted',{roomId});
+  }catch(ex){ alert('Delete failed: '+ex.message); }
+}
+
+/* ---- ROOM 12HR COUNTDOWN ---- */
+function startRoomCountdown(roomId, totalSec){
+  if(roomCountdowns[roomId]) clearInterval(roomCountdowns[roomId].iv);
+  const expiresAt = Date.now() + totalSec*1000;
+  roomCountdowns[roomId] = { expiresAt };
+
+  // Show countdown message in room
+  const warnMsg = {type:'sys', text:'⏳ This room auto-deletes in '+fmtDur(totalSec)};
+  if(!pubMsgs[roomId]) pubMsgs[roomId]=[];
+  pubMsgs[roomId].unshift(warnMsg);
+
+  const iv = setInterval(()=>{
+    const left = Math.ceil((expiresAt - Date.now())/1000);
+    // Update countdown pill in sidebar
+    const el=document.getElementById('rcd-'+roomId);
+    if(el) el.textContent='⏳ '+fmtDur(left);
+    if(left<=0){
+      clearInterval(iv);
+      // Auto delete
+      fetch('/api/rooms/'+roomId,{method:'DELETE',headers:{Authorization:'Bearer '+token}}).catch(()=>{});
+      const idx=pubRooms.findIndex(x=>x.id===roomId);
+      if(idx>=0) pubRooms.splice(idx,1);
+      delete pubMsgs[roomId];
+      delete roomCountdowns[roomId];
+      if(activePub?.id===roomId){
+        activePub=pubRooms.find(r=>r.isDefault)||pubRooms[0];
+        if(activePub){ updatePubHdr(activePub); renderMsgs(); }
+      }
+      renderPubList(pubRooms);
+      socket?.emit('room:deleted',{roomId});
+    }
+  }, 10000); // update every 10s
+  roomCountdowns[roomId].iv = iv;
+  if(curTab==='public') renderPubList(pubRooms);
+}
+
+function fmtDur(sec){
+  if(sec<=0) return '0s';
+  if(sec<60) return sec+'s';
+  if(sec<3600) return Math.ceil(sec/60)+'m';
+  return Math.ceil(sec/3600)+'h';
+}
+
+async function loadCustomRooms(){
+  try{
+    const r=await fetch('/api/rooms',{headers:{Authorization:'Bearer '+token}});
+    const rooms=await r.json();
+    rooms.forEach(room=>{
+      if(!pubRooms.find(x=>x.id===room.id)){
+        pubRooms.push(room);
+        if(!pubMsgs[room.id]) pubMsgs[room.id]=[];
+        // Start countdown based on remaining time
+        if(room.expiresAt){
+          const leftSec = Math.ceil((new Date(room.expiresAt)-Date.now())/1000);
+          if(leftSec>0) startRoomCountdown(room.id, leftSec);
+        }
+      }
+    });
+    if(curTab==='public') renderPubList(pubRooms);
+  }catch(e){ console.error('Load rooms:',e); }
+}
+
+function showCreateRoom(){
+  document.getElementById('create-room-modal').style.display='flex';
+}
+function hideCreateRoom(){
+  document.getElementById('create-room-modal').style.display='none';
+  document.getElementById('cr-name').value='';
+  document.getElementById('cr-pw').value='';
+  document.getElementById('cr-e').style.display='none';
+}
+
+async function doCreateRoom(){
+  const name=document.getElementById('cr-name').value.trim();
+  const pw=document.getElementById('cr-pw').value.trim();
+  const e=document.getElementById('cr-e');
+  if(!name){ e.textContent='Room name required'; e.style.display='block'; return; }
+  try{
+    const r=await fetch('/api/rooms',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify({name,password:pw||null,createdBy:me?.id})
+    });
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error);
+    // Add to local list
+    if(!pubRooms.find(x=>x.id===d.id)){
+      d.createdBy=me?.id;
+      pubRooms.push(d);
+      pubMsgs[d.id]=[];
+      // Start 12hr auto-delete countdown
+      startRoomCountdown(d.id, 12*60*60);
+    }
+    renderPubList(pubRooms);
+    hideCreateRoom();
+    // Broadcast new room to all connected users via socket
+    socket?.emit('room:announce', d);
+    // Auto-join the new room
+    activePub=d;
+    socket?.emit('room:subscribe',{roomId:d.id});
+    updatePubHdr(d);
+    renderMsgs();
+  }catch(ex){ e.textContent=ex.message; e.style.display='block'; }
+}
+
+function initChat(){
+  showPage('pg-chat');
+  connectSocket();
+  switchTab('public'); // Start in public room
+  // Auto-select Public room after socket connects
+  setTimeout(()=>{
+    const pub = pubRooms.find(r=>r.id==='public');
+    if(pub){ selPub('public'); }
+  }, 800);
+}
+
+function connectSocket(){
+  if(socket) socket.disconnect();
+  socket=io({auth:{token}});
+  socket.on('connect',()=>{ document.getElementById('hst').textContent='● Connected'; loadPubHist('public'); loadCustomRooms(); });
+  socket.on('connect_error',e=>console.error('Socket:',e.message));
+
+  socket.on('users:online',list=>{
+    onlineUsers=list.filter(u=>u._id!==me?.id);
+    if(curTab==='private') renderPrivList(onlineUsers);
+  });
+
+  socket.on('private:message',msg=>{
+    const senderId = msg.sender._id||msg.sender;
+    const oid = senderId===me?.id ? (msg.receiver?._id||msg.receiver) : senderId;
+    if(!privMsgs[oid]) privMsgs[oid]=[];
+    const exists = privMsgs[oid].find(m=>m._id?.toString()===msg._id?.toString());
+    if(!exists){
+      // Set initial status
+      if(senderId===me?.id) msg.status='sent';
+      privMsgs[oid].push(msg);
+    }
+    // If this is MY message being echoed back — update to 'delivered' if receiver is viewing
+    if(senderId===me?.id){
+      // Already delivered since receiver got it
+      const m2=privMsgs[oid].find(m=>m._id?.toString()===msg._id?.toString());
+      if(m2) m2.status='delivered';
+    } else {
+      // Incoming message from other — send seen if chat is open
+      if(curTab==='private'&&activePriv?._id===oid){
+        socket.emit('message:seen',{toUser:oid, lastMsgId:msg._id?.toString()});
+      }
+    }
+    if(curTab==='private'&&activePriv?._id===oid) renderMsgs();
+  });
+
+  socket.on('public:message',msg=>{
+    if(!pubMsgs[msg.room]) pubMsgs[msg.room]=[];
+    if(!pubMsgs[msg.room].find(m=>m._id?.toString()===msg._id?.toString())){
+      // Clone message so each user has own burn state
+      const m2 = {...msg, _burnedForMe: false, _myBurnStarted: false};
+      pubMsgs[msg.room].push(m2);
+    }
+    // Enforce max 50 messages
+    if(pubMsgs[msg.room].length > 50) pubMsgs[msg.room].splice(0, pubMsgs[msg.room].length - 50);
+    if(curTab==='public'&&activePub?.id===msg.room) renderMsgs();
+  });
+
+  socket.on('typing:private',({senderId,username,typing})=>{ if(activePriv?._id===senderId) document.getElementById('typind').textContent=typing?username+' is typing...':''; });
+  socket.on('typing:public',({username,typing})=>{ if(curTab==='public') document.getElementById('typind').textContent=typing?username+' is typing...':''; });
+
+  // Burn countdown confirmed by server — only start msg bubble countdown
+  // Lightbox countdown already started via img.onload, don't reset it
+  socket.on('image:countdown',({messageId,burnAfter})=>{
+    startMsgCountdown(messageId, burnAfter);
+    // Do NOT restart lightbox countdown here — already running from img.onload
+  });
+
+  // Image burned — for public room, mark only for this user
+  socket.on('image:burned',({messageId, forUserId})=>{
+    // Only burn for current user (per-user burn in public rooms)
+    if(forUserId && forUserId !== me?.id) return;
+    markBurned(messageId);
+    if(lbxMsgId===messageId) closeLbx();
+  });
+
+  // Message unsent
+  socket.on('message:unsent',({messageId})=>{ removeMsg(messageId); });
+
+  // Delivered confirmation
+  socket.on('message:delivered',({msgIds})=>{
+    msgIds.forEach(id=>{
+      Object.values(privMsgs).forEach(arr=>{
+        const m=arr.find(x=>x._id?.toString()===id);
+        if(m && m.status==='sent') m.status='delivered';
+      });
+    });
+    if(curTab==='private') renderMsgs();
+  });
+
+  // Seen confirmation
+  socket.on('message:seen_ack',({byUser})=>{
+    const msgs=privMsgs[byUser]||[];
+    msgs.forEach(m=>{ if(m.status==='delivered'||m.status==='sent') m.status='seen'; });
+    if(curTab==='private'&&activePriv?._id===byUser) renderMsgs();
+  });
+
+  // Room join result (password check)
+  socket.on('room:join:ok',({roomId})=>{
+    const room=pubRooms.find(r=>r.id===roomId);
+    if(!room) return;
+    room._unlocked=true; // mark as verified for this session
+    activePub=room;
+    updatePubHdr(activePub);
+    loadPubHist(roomId);
+    renderMsgs();
+    renderPubList(pubRooms);
+    closeSB();
+    socket.emit('room:subscribe',{roomId});
+  });
+  socket.on('room:join:fail',({roomId})=>{
+    alert('❌ Wrong password!');
+  });
+  // New custom room created by someone
+  socket.on('room:new',({room})=>{
+    if(!pubRooms.find(r=>r.id===room.id)){
+      pubRooms.push(room);
+      if(!pubMsgs[room.id]) pubMsgs[room.id]=[];
+      if(room.expiresAt){
+        const leftSec=Math.ceil((new Date(room.expiresAt)-Date.now())/1000);
+        if(leftSec>0) startRoomCountdown(room.id, leftSec);
+      }
+    }
+    if(curTab==='public') renderPubList(pubRooms);
+  });
+  // Room deleted by creator or expired
+  socket.on('room:deleted',({roomId})=>{
+    const idx=pubRooms.findIndex(r=>r.id===roomId);
+    if(idx>=0) pubRooms.splice(idx,1);
+    delete pubMsgs[roomId];
+    if(roomCountdowns[roomId]){ clearInterval(roomCountdowns[roomId].iv); delete roomCountdowns[roomId]; }
+    if(activePub?.id===roomId){
+      activePub=pubRooms.find(r=>r.isDefault)||pubRooms[0];
+      if(activePub){ updatePubHdr(activePub); renderMsgs(); }
+      else resetHdr();
+    }
+    if(curTab==='public') renderPubList(pubRooms);
+  });
+
+  // Screenshot notification received
+  socket.on('screenshot:notify',({by})=>{
+    showScreenshotAlert(by+' took a screenshot!');
+    // Add system message to current chat
+    const sysmsg=document.createElement('div');
+    sysmsg.className='sysmsg';
+    sysmsg.style.background='#fef2f2';
+    sysmsg.style.borderColor='#fecaca';
+    sysmsg.style.color='#ef4444';
+    sysmsg.textContent='📸 '+by+' took a screenshot';
+    document.getElementById('msgs').appendChild(sysmsg);
+    document.getElementById('msgs').scrollTop=99999;
+  });
+}
+
+/* ================================================================
+   HISTORY
+================================================================ */
+async function loadPrivHist(uid){
+  if(privMsgs[uid]?.length) return;
+  try{ const r=await fetch('/api/messages/private/'+uid,{headers:{Authorization:'Bearer '+token}}); privMsgs[uid]=await r.json(); if(activePriv?._id===uid) renderMsgs(); }catch(e){ console.error(e); }
+}
+async function loadPubHist(room){
+  if(pubMsgs[room]?.length) return;
+  try{
+    const r=await fetch('/api/messages/public/'+room,{headers:{Authorization:'Bearer '+token}});
+    const data=await r.json();
+    pubMsgs[room]=Array.isArray(data)?data:[];
+    if(curTab==='public'&&activePub?.id===room) renderMsgs();
+  }catch(e){ console.error(e); pubMsgs[room]=[]; }
+}
+
+/* ================================================================
+   TAB + LISTS
+================================================================ */
+function switchTab(tab){
+  curTab=tab;
+  document.getElementById('tab-priv').classList.toggle('active',tab==='private');
+  document.getElementById('tab-pub').classList.toggle('active',tab==='public');
+  if(tab==='private'){
+    document.getElementById('sb-lbl').innerHTML='Online &mdash; <span id="oc">'+onlineUsers.length+'</span>';
+    renderPrivList(onlineUsers);
+    document.getElementById('pub-banner').style.display='none';
+    document.getElementById('msginput').placeholder='Type a private message...';
+    if(activePriv){updatePrivHdr(activePriv);renderMsgs();}else resetHdr();
+  }else{
+    document.getElementById('sb-lbl').innerHTML='Public Rooms &mdash; <span id="oc">'+pubRooms.length+'</span>';
+    renderPubList(pubRooms);
+    document.getElementById('pub-banner').style.display='flex';
+    document.getElementById('msginput').placeholder='Send to room...';
+    if(!activePub) activePub=pubRooms.find(r=>r.id==='public')||pubRooms[0];
+    updatePubHdr(activePub); loadPubHist(activePub.id); renderMsgs();
+  }
+}
+
+function renderPrivList(list){
+  document.getElementById('oc').textContent=list.length;
+  document.getElementById('ulist').innerHTML=list.map(u=>`
+    <div class="uitem${activePriv?._id===u._id?' active':''}" onclick="selPriv('${u._id}')">
+      <div class="av ${u.gender}">${ini(u.username)}<span class="av-dot"></span></div>
+      <div class="uinfo"><div class="unm ${u.gender}">${u.username} ${u.country?getFlag(u.country):''}</div><div class="ulast">${u.lastMsg||'Say hello 👋'}</div></div>
+    </div>`).join('')||'<div style="padding:16px;text-align:center;color:#86efac;font-size:13px;">No users online</div>';
+}
+function renderPubList(list){
+  const defaultList  = list.filter(r=>r.isDefault);
+  const customList   = list.filter(r=>!r.isDefault);
+
+  const mkItem = (r) => {
+    const isActive = activePub?.id===r.id;
+    const cd = roomCountdowns[r.id];
+    const cdHtml = cd ? `<div class="room-cd" id="rcd-${r.id}">⏳ ${fmtSec(Math.max(0,Math.ceil((cd.expiresAt-Date.now())/1000)))}</div>` : '';
+    const delBtn = (!r.isDefault && r.createdBy===me?.id)
+      ? `<button class="room-del-btn" onclick="deleteRoom(event,'${r.id}')">✕</button>` : '';
+    const lastMsg = (pubMsgs[r.id]||[]).slice(-1)[0];
+    const lastTxt = lastMsg ? (lastMsg.text||'📷 Photo') : 'No messages yet';
+    return `<div class="uitem${isActive?' active':''}" id="ri-${r.id}" onclick="selPub('${r.id}')">
+      <div class="av pub" style="${r.isDefault?'background:#22c55e;color:#fff;':''}">${r.initials}</div>
+      <div class="uinfo">
+        <div class="unm room">${r.locked?'🔒 ':''}${r.name}</div>
+        <div class="ulast">${esc(lastTxt)}</div>
+        ${cdHtml}
+      </div>
+      <div class="umeta" style="flex-shrink:0;">${delBtn}</div>
+    </div>`;
+  };
+
+  const createBtn=`<div class="uitem create-room-btn" onclick="showCreateRoom()" style="border:1.5px dashed #bbf7d0;margin:6px 0 2px;">
+    <div class="av pub" style="background:#f0fdf4;border:1.5px dashed #86efac;color:#22c55e;font-size:18px;font-weight:700;">+</div>
+    <div class="uinfo"><div class="unm room" style="color:#22c55e;">Create Room</div><div class="ulast">New private room</div></div>
+  </div>`;
+
+  const separator = customList.length>0 ? `<div style="padding:6px 10px 2px;font-size:10px;font-weight:700;color:#86efac;letter-spacing:.8px;text-transform:uppercase;">Custom Rooms</div>` : '';
+
+  document.getElementById('ulist').innerHTML =
+    defaultList.map(mkItem).join('') +
+    createBtn +
+    separator +
+    customList.map(mkItem).join('');
+}
+function selPriv(id){
+  activePriv=onlineUsers.find(u=>u._id===id);
+  if(!activePriv) return;
+  updatePrivHdr(activePriv);
+  loadPrivHist(id);
+  renderMsgs();
+  renderPrivList(onlineUsers); // re-render to update highlight
+  closeSB();
+  const msgs=privMsgs[id]||[];
+  const lastMsg=msgs.filter(m=>(m.sender?._id||m.sender)!==me?.id).slice(-1)[0];
+  if(lastMsg) socket?.emit('message:seen',{toUser:id, lastMsgId:lastMsg._id?.toString()});
+}
+function selPub(id){
+  const room=pubRooms.find(r=>r.id===id);
+  if(!room) return;
+  if(room.locked && !room._unlocked){
+    const pw=prompt('🔒 Enter room password for "'+room.name+'":');
+    if(!pw) return;
+    socket?.emit('room:join',{roomId:id, password:pw});
+    return;
+  }
+  activePub=room;
+  updatePubHdr(activePub);
+  loadPubHist(id);
+  renderMsgs();
+  renderPubList(pubRooms); // re-render to update highlight
+  closeSB();
+}
+function updatePrivHdr(u){
+  document.getElementById('hav').textContent=ini(u.username);
+  document.getElementById('hav').className='hav '+u.gender;
+  document.getElementById('hnm').textContent=u.username;
+  document.getElementById('hnm').className='hnm '+u.gender;
+  const flagHtml = u.country ? getFlag(u.country) : '';
+  document.getElementById('hst').innerHTML='● Online · '+(u.age||'')+' · '+(u.gender==='male'?'Male':'Female')+flagHtml;
+}
+function updatePubHdr(r){ document.getElementById('hav').textContent=r.initials; document.getElementById('hav').className='hav pub'; document.getElementById('hnm').textContent=r.name; document.getElementById('hnm').className='hnm pub'; document.getElementById('hst').textContent='🌐 Public Room'; }
+function resetHdr(){ document.getElementById('hav').textContent='GC'; document.getElementById('hnm').textContent='Select a user'; document.getElementById('hst').textContent='Online'; }
+function filterList(q){ const ql=q.toLowerCase(); if(curTab==='private') renderPrivList(onlineUsers.filter(u=>u.username.toLowerCase().includes(ql))); else renderPubList(pubRooms.filter(r=>r.name.toLowerCase().includes(ql))); }
+
+/* ================================================================
+   RENDER MESSAGES
+================================================================ */
+function imgUrl(m){
+  // Build image URL with JWT token as query param
+  return m.imageUrl + '?t=' + encodeURIComponent(token);
+}
+
+function renderMsgs(){
+  const area=document.getElementById('msgs');
+  const msgs=curTab==='private'?(activePriv?privMsgs[activePriv._id]||[]:[]):(activePub?pubMsgs[activePub.id]||[]:[]);
+  if(!msgs.length){ area.innerHTML='<div class="sysmsg">No messages yet. Say hello! 👋</div>'; return; }
+
+  area.innerHTML='<div class="divid">Today</div>'+msgs.map(m=>{
+    if(m.type==='sys') return `<div class="sysmsg">📢 ${m.text}</div>`;
+    const isMe=(m.sender?._id||m.sender)===me?.id;
+    const sdr=m.sender||{};
+    const av=isMe?ini(me.username):ini(sdr.username||'?');
+    const g=isMe?(me.gender||'male'):(sdr.gender||'male');
+    const name=isMe?'':(sdr.username||'');
+    const time=fmtTime(m.createdAt);
+    const mid=m._id?.toString();
+
+    // Build image HTML
+    let imgHtml='';
+    if(m.imageUrl && !m.burned){
+      const prot=m.burnProtected?'protected':'';
+      const url=imgUrl(m);
+      const hasBurn=!!m.burnAfter;
+      // If burn timer set — show blurred preview with "click to view" overlay
+      // Image only opens in lightbox on click, timer starts then
+      if(hasBurn){
+        imgHtml=`<div class="img-click-wrap burn-blur-wrap ${prot}" onclick="openLbx('${mid}','${url}',${m.burnAfter||0},${!!m.burnProtected},'${esc(sdr.username||me?.username||'')}',${isMe})" style="cursor:pointer;">
+          <img class="img-in-bubble blur-preview" src="${url}" alt="image" ondragstart="return false" oncontextmenu="return false" style="filter:blur(18px);opacity:0.7;transform:scale(1.05);"/>
+          <div class="burn-tap-overlay"><div class="burn-tap-icon">🔥</div><div class="burn-tap-label">Tap to view · ${fmtSec(m.burnAfter)}</div></div>
+          ${m.burnProtected?'<div class="prot-pill">🛡</div>':''}
+        </div>`;
+      } else {
+        imgHtml=`<div class="img-click-wrap ${prot}" onclick="openLbx('${mid}','${url}',0,${!!m.burnProtected},'${esc(sdr.username||me?.username||'')}',${isMe})">
+          <img class="img-in-bubble" src="${url}" alt="image" ondragstart="return false" oncontextmenu="return ${!m.burnProtected}"/>
+          ${m.burnProtected?'<div class="prot-pill">🛡</div>':''}
+        </div>`;
+      }
+    } else if(m.burned){
+      imgHtml=`<div class="burned-msg">🔥 Image deleted</div>`;
+    }
+
+    // Unsend button (only for my messages, not burned images)
+    const unsendBtn=isMe&&!m.burned?`<button class="unsend-btn" onclick="unsendMsg('${mid}',event)">✕ Unsend</button>`:'';
+
+    // Message status (only for my messages in private chat)
+    let statusHtml = '';
+    if(isMe && curTab==='private'){
+      const st = m.status || 'sent';
+      const statusMap = {
+        sent:      '<span class="msg-status sent" title="Sent">✓</span>',
+        delivered: '<span class="msg-status delivered" title="Delivered">✓✓</span>',
+        seen:      '<span class="msg-status seen" title="Seen">👁</span>'
+      };
+      statusHtml = statusMap[st] || statusMap.sent;
+    }
+
+    return `<div class="mrow${isMe?' me':''}" id="msg-${mid}">
+      <div class="mav ${g}">${av}</div>
+      <div class="mcnt">
+        ${!isMe&&name?`<div class="mnm ${g}">${name} ${m.sender?.country?getFlag(m.sender.country):''}</div>`:''}
+        <div class="mbub">${m.text?esc(m.text):''}${imgHtml}</div>
+        <div class="mtime">${time} ${statusHtml} ${unsendBtn}</div>
+      </div>
+    </div>`;
+  }).join('');
+  area.scrollTop=area.scrollHeight;
+
+  // Timer starts only when user clicks to open (inside openLbx)
+}
+
+/* ================================================================
+   UNSEND
+================================================================ */
+function unsendMsg(msgId, e){
+  e.stopPropagation();
+  if(!confirm('Unsend this message?')) return;
+  socket?.emit('message:unsend',{messageId:msgId});
+}
+function removeMsg(msgId){
+  // Remove from caches
+  Object.values(privMsgs).forEach(arr=>{ const i=arr.findIndex(m=>m._id?.toString()===msgId); if(i>=0) arr.splice(i,1); });
+  Object.values(pubMsgs).forEach(arr=>{ const i=arr.findIndex(m=>m._id?.toString()===msgId); if(i>=0) arr.splice(i,1); });
+  // Remove from DOM
+  const el=document.getElementById('msg-'+msgId);
+  if(el) el.outerHTML=`<div class="mrow me"><div class="mav male">${ini(me?.username||'')}</div><div class="mcnt"><div class="mbub"><div class="unsent-placeholder">🚫 You unsent this message</div></div></div></div>`;
+}
+
+/* ================================================================
+   BURN COUNTDOWN IN MESSAGE
+================================================================ */
+function startMsgCountdown(msgId, burnSec){
+  const el=document.getElementById('bct-'+msgId);
+  const pill=document.getElementById('bp-'+msgId);
+  if(!el) return;
+  if(pill) pill.style.display='flex';
+  let left=burnSec;
+  el.textContent=fmtSec(left);
+  const iv=setInterval(()=>{ left--; if(left<=0){clearInterval(iv);return;} if(el) el.textContent=fmtSec(left); },1000);
+}
+function markBurned(msgId){
+  [privMsgs,pubMsgs].forEach(cache=>Object.values(cache).forEach(arr=>{ const m=arr.find(x=>x._id?.toString()===msgId); if(m){m.burned=true;m.imageUrl=null;} }));
+  const wrap=document.getElementById('msg-'+msgId);
+  if(wrap){
+    const imgWrap=wrap.querySelector('.img-click-wrap');
+    if(imgWrap) imgWrap.outerHTML='<div class="burned-msg">🔥 Image deleted</div>';
+  }
+}
+
+/* ================================================================
+   TELEGRAM LIGHTBOX — full screen with circular countdown
+================================================================ */
+function openLbx(msgId, url, burnSec, isProtected, senderName, isMine){
+  lbxMsgId=msgId; lbxBurnSec=burnSec; lbxProtect=isProtected; lbxLeft=burnSec;
+
+  const lbx=document.getElementById('lbx');
+  const area=document.getElementById('lbx-img-area');
+  const img=document.getElementById('lbx-img');
+  const bot=document.getElementById('lbx-bottombar');
+  const protBadge=document.getElementById('lbx-prot');
+
+  document.getElementById('lbx-sender').textContent=senderName?'From: '+senderName:'';
+  img.src=url;
+
+  if(isProtected){
+    area.classList.add('protected');
+    img.oncontextmenu=()=>false;
+    img.ondragstart=()=>false;
+    protBadge.style.display='flex';
+  }else{
+    area.classList.remove('protected');
+    protBadge.style.display='none';
+  }
+
+  if(burnSec){
+    bot.style.display='flex';
+    updateBurnCircle(burnSec, burnSec);
+    // Countdown starts when server sends image:countdown
+    // But if already started (burn timer), start immediately
+  }else{
+    bot.style.display='none';
+  }
+
+  lbx.classList.add('open');
+
+  // Start timer ONLY after image loaded AND only for receiver (not sender)
+  img.onload = () => {
+    if(burnSec && !isMine){
+      startLbxCountdown(burnSec);
+    }
+  };
+  // If image already cached and onload won't fire again
+  if(img.complete && img.naturalWidth > 0 && burnSec && !isMine){
+    startLbxCountdown(burnSec);
+  }
+
+  // Tell server image was viewed — triggers per-user burn
+  if(!isMine){
+    socket?.emit('image:viewed',{messageId:msgId, isPublic: curTab==='public'});
+  }
+}
+
+function startLbxCountdown(burnSec){
+  clearInterval(lbxIv);
+  lbxLeft=burnSec;
+  updateBurnCircle(lbxLeft, burnSec);
+  lbxIv=setInterval(()=>{
+    lbxLeft--;
+    updateBurnCircle(lbxLeft, burnSec);
+    if(lbxLeft<=0){ clearInterval(lbxIv); closeLbx(); }
+  },1000);
+}
+
+function updateBurnCircle(left, total){
+  document.getElementById('burn-num').textContent=fmtSec(left);
+  const circ=175.93; // 2*pi*28
+  const prog=document.getElementById('burn-prog');
+  const pct=left/total;
+  prog.style.strokeDashoffset=circ*(1-pct);
+  // Color: green→orange→red
+  prog.style.stroke=left>total*0.5?'#22c55e':left>total*0.2?'#f59e0b':'#ef4444';
+}
+
+function closeLbx(){
+  clearInterval(lbxIv);
+  document.getElementById('lbx').classList.remove('open');
+  document.getElementById('lbx-img').src='';
+  document.getElementById('lbx-img-area').classList.remove('protected');
+  lbxMsgId=null; lbxBurnSec=0; lbxProtect=false;
+}
+
+// Block right-click & keyboard shortcuts on protected images
+document.addEventListener('contextmenu',e=>{ if(e.target.closest('.img-click-wrap.protected')||(lbxProtect&&document.getElementById('lbx').classList.contains('open'))){ e.preventDefault(); return false; } });
+document.addEventListener('keydown',e=>{
+  // Always detect PrintScreen (screenshot attempt)
+  if(e.key==='PrintScreen'||e.keyCode===44){
+    e.preventDefault();
+    notifyScreenshot();
+    return false;
+  }
+  if(!lbxProtect||!document.getElementById('lbx').classList.contains('open')) return;
+  if((e.ctrlKey||e.metaKey)&&['s','p','a','c'].includes(e.key.toLowerCase())){ e.preventDefault(); return false; }
+});
+document.addEventListener('dragstart',e=>{ if(e.target.closest('.img-click-wrap.protected')) e.preventDefault(); });
+
+/* Screenshot detection & notification */
+function notifyScreenshot(){
+  // Notify other user via socket
+  socket?.emit('screenshot:taken',{
+    room:    curTab==='public'?activePub?.id:null,
+    toUser:  curTab==='private'?activePriv?._id:null,
+    by:      me?.username||'Someone'
+  });
+  // Show local notification
+  showScreenshotAlert('You took a screenshot. The other user will be notified.');
+}
+
+// Also detect via visibilitychange on mobile (some devices trigger this on screenshot)
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden) return;
+  // On mobile, a very short hide+show can indicate screenshot
+  const t=Date.now();
+  const check=setTimeout(()=>{
+    if(!document.hidden && (Date.now()-t)<800){
+      // Possible screenshot on mobile
+      socket?.emit('screenshot:taken',{
+        room:    curTab==='public'?activePub?.id:null,
+        toUser:  curTab==='private'?activePriv?._id:null,
+        by:      me?.username||'Someone'
+      });
+    }
+  },300);
+});
+
+function showScreenshotAlert(txt){
+  const el=document.createElement('div');
+  el.className='ss-alert';
+  el.innerHTML='📸 '+txt;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),4000);
+}
+
+/* ================================================================
+   SEND MESSAGE
+================================================================ */
+async function sendMsg(){
+  if(!socket?.connected) return;
+  const input=document.getElementById('msginput');
+  const txt=input.value.trim();
+  if(!txt&&pendingFiles.length===0) return;
+  if(pendingFiles.length>0){
+    for(const pf of pendingFiles) await uploadAndSend(pf.file,txt);
+    pendingFiles=[];
+    document.getElementById('prev-bar').innerHTML='';
+    document.getElementById('img-settings').classList.remove('show');
+  }else{
+    if(curTab==='private'){ if(!activePriv) return; socket.emit('private:message',{receiverId:activePriv._id,text:txt}); }
+    else{ if(!activePub) return; socket.emit('public:message',{room:activePub.id,text:txt}); }
+  }
+  input.value=''; input.style.height='auto';
+}
+
+async function uploadAndSend(file,text){
+  const burnAfter=document.getElementById('burn-sel').value;
+  const fd=new FormData();
+  fd.append('image',file);
+  fd.append('text',text||'');
+  fd.append('burnAfter',burnAfter);
+  fd.append('burnProtected',protectOn?'true':'false');
+  if(curTab==='private'){ if(!activePriv) return; fd.append('type','private'); fd.append('receiverId',activePriv._id); }
+  else{ if(!activePub) return; fd.append('type','public'); fd.append('room',activePub.id); }
+  try{
+    const r=await fetch('/api/images/upload',{method:'POST',headers:{Authorization:'Bearer '+token},body:fd});
+    const d=await r.json(); if(!r.ok) throw new Error(d.error);
+    if(curTab==='private') socket.emit('private:image',{receiverId:activePriv._id,messageId:d.messageId,burnAfter:d.burnAfter,burnProtected:d.burnProtected});
+    else socket.emit('public:image',{room:activePub.id,messageId:d.messageId,burnAfter:d.burnAfter,burnProtected:d.burnProtected});
+  }catch(e){ console.error('Upload:',e.message); alert('Upload failed: '+e.message); }
+}
+
+/* ================================================================
+   TYPING + UTILS
+================================================================ */
+function onType(el){
+  el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px';
+  if(!socket?.connected) return;
+  if(curTab==='private'&&activePriv) socket.emit('typing:private',{receiverId:activePriv._id,typing:true});
+  else if(curTab==='public'&&activePub) socket.emit('typing:public',{room:activePub.id,typing:true});
+  clearTimeout(typTimer);
+  typTimer=setTimeout(()=>{ if(curTab==='private'&&activePriv) socket.emit('typing:private',{receiverId:activePriv._id,typing:false}); else if(curTab==='public'&&activePub) socket.emit('typing:public',{room:activePub.id,typing:false}); },1500);
+}
+function handleKey(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();} }
+
+function handleFiles(input){
+  Array.from(input.files).forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      pendingFiles.push({file,dataUrl:e.target.result});
+      const bar=document.getElementById('prev-bar');
+      const idx=pendingFiles.length-1;
+      const d=document.createElement('div'); d.className='prev-thumb'; d.id='pt-'+idx;
+      d.innerHTML=`<img src="${e.target.result}"/><button class="prev-rm" onclick="rmFile(${idx})">✕</button>`;
+      bar.appendChild(d);
+      document.getElementById('img-settings').classList.add('show');
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value='';
+}
+function rmFile(idx){ pendingFiles.splice(idx,1); const el=document.getElementById('pt-'+idx); if(el) el.remove(); if(pendingFiles.length===0) document.getElementById('img-settings').classList.remove('show'); }
+function toggleProt(){ protectOn=!protectOn; document.getElementById('prot-tog').classList.toggle('on',protectOn); document.getElementById('prot-lbl').textContent=protectOn?'ON':'OFF'; }
+
+function openSB(){ document.getElementById('sb').classList.add('open'); document.getElementById('ov').classList.add('open'); }
+function closeSB(){ document.getElementById('sb').classList.remove('open'); document.getElementById('ov').classList.remove('open'); }
+
+function ini(n=''){ return n.substring(0,2).toUpperCase()||'GC'; }
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtTime(d){ if(!d) return ''; const dt=new Date(d); return dt.getHours().toString().padStart(2,'0')+':'+dt.getMinutes().toString().padStart(2,'0'); }
+function fmtSec(s){ if(s>=60) return Math.ceil(s/60)+'m'; return s+'s'; }
+
+
+let countryDropOpen = false;
+
+function buildCountryList(filter){
+  const list = document.getElementById('country-list');
+  if(!list) return;
+  const q = (filter||'').toLowerCase();
+  const entries = Object.entries(COUNTRY_MAP)
+    .filter(([code,[flag,name]])=> !q || name.toLowerCase().includes(q) || code.toLowerCase().includes(q))
+    .sort((a,b)=>a[1][1].localeCompare(b[1][1]));
+  
+  list.innerHTML = entries.map(([code,[flag,name]])=>
+    `<div class="country-opt" onclick="selectCountry('${code}','${flag}','${name}')">
+      <span class="cflag">${flag}</span>
+      <span class="cname">${name}</span>
+    </div>`
+  ).join('');
+}
+
+function selectCountry(code, flag, name){
+  document.getElementById('l-country').value = code;
+  document.getElementById('l-country-label').innerHTML = '<span style="font-size:16px;margin-right:6px;">'+flag+'</span><span style="color:#166534;font-weight:600;">'+name+'</span>';
+  document.getElementById('l-country-label').style.color = '#166534';
+  closeCountryDrop();
+}
+
+function toggleCountryDrop(){
+  const drop = document.getElementById('country-drop');
+  if(countryDropOpen){ closeCountryDrop(); return; }
+  drop.style.display = 'block';
+  countryDropOpen = true;
+  buildCountryList('');
+  setTimeout(()=>{ const s=document.getElementById('country-search'); if(s) s.focus(); }, 50);
+}
+
+function closeCountryDrop(){
+  const drop = document.getElementById('country-drop');
+  if(drop) drop.style.display = 'none';
+  countryDropOpen = false;
+}
+
+function filterCountries(q){ buildCountryList(q); }
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e){
+  const wrap = document.getElementById('country-wrap');
+  if(wrap && !wrap.contains(e.target)) closeCountryDrop();
+});
+
+
+/* ---- COUNTRY PICKER ---- */
+const POPULAR_COUNTRIES = ['LK','IN','PK','BD','US','GB','AE','SA','AU','CA','DE','FR','JP','KR','SG','MY','PH','ID','TH','EG','NG','ZA','TR','IR','IQ'];
+
+function initCountryAutoDetect(){
+  try{
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const tzMap = {
+      'Asia/Colombo':'LK','Asia/Calcutta':'IN','Asia/Kolkata':'IN','Asia/Karachi':'PK',
+      'Asia/Dhaka':'BD','America/New_York':'US','America/Los_Angeles':'US','America/Chicago':'US',
+      'Europe/London':'GB','Europe/Paris':'FR','Europe/Berlin':'DE','Asia/Tokyo':'JP',
+      'Asia/Seoul':'KR','Asia/Dubai':'AE','Asia/Singapore':'SG','Asia/Bangkok':'TH',
+      'Asia/Jakarta':'ID','Asia/Manila':'PH','Asia/Kuala_Lumpur':'MY','Africa/Cairo':'EG',
+      'Asia/Riyadh':'SA','Asia/Kuwait':'KW','Asia/Qatar':'QA','Asia/Baghdad':'IQ',
+      'Asia/Tehran':'IR','Asia/Beirut':'LB','Europe/Moscow':'RU','Europe/Istanbul':'TR',
+      'Australia/Sydney':'AU','Australia/Melbourne':'AU','America/Toronto':'CA',
+      'America/Sao_Paulo':'BR','America/Mexico_City':'MX','Africa/Lagos':'NG',
+      'Africa/Accra':'GH','Africa/Nairobi':'KE','Africa/Johannesburg':'ZA',
+      'Europe/Rome':'IT','Europe/Madrid':'ES','Europe/Amsterdam':'NL','Europe/Warsaw':'PL',
+      'Europe/Bucharest':'RO','Europe/Athens':'GR','Europe/Lisbon':'PT','Europe/Stockholm':'SE',
+      'Europe/Oslo':'NO','Europe/Helsinki':'FI','Europe/Vienna':'AT','Europe/Brussels':'BE',
+      'Europe/Zurich':'CH','Europe/Budapest':'HU','Europe/Prague':'CZ','Europe/Sofia':'BG',
+      'Pacific/Auckland':'NZ','America/Lima':'PE','America/Bogota':'CO','America/Santiago':'CL',
+      'Asia/Taipei':'TW','Asia/Shanghai':'CN','Asia/Ho_Chi_Minh':'VN','Europe/Kiev':'UA',
+      'Europe/Kyiv':'UA','Asia/Tashkent':'UZ','Asia/Almaty':'KZ'
+    };
+    const code = tzMap[tz] || '';
+    if(code) setCountry(code);
+  }catch(e){}
+}
+
+function setCountry(code){
+  if(!code||!COUNTRY_MAP[code]) return;
+  document.getElementById('l-country').value = code;
+  const [flag, name] = COUNTRY_MAP[code];
+  const flagEl = document.getElementById('country-flag-preview');
+  const nameEl = document.getElementById('country-name-preview');
+  if(flagEl) flagEl.innerHTML = '<img src="https://flagcdn.com/20x15/'+code.toLowerCase()+'.png" width="20" height="15" style="border-radius:2px;" onerror="this.remove()"/>';
+  if(nameEl) nameEl.textContent = name;
+}
+
+function openCountryPick(){
+  // Show modal overlay for country selection
+  const overlay = document.createElement('div');
+  overlay.id = 'cp-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:flex-end;justify-content:center;';
+  
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:80vh;display:flex;flex-direction:column;';
+  modal.innerHTML = `
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #d1fae5;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:16px;font-weight:700;color:#166534;">🌍 Select Country</div>
+      <button onclick="document.getElementById('cp-overlay').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#9ca3af;line-height:1;">✕</button>
+    </div>
+    <div style="padding:12px 16px;border-bottom:1px solid #f0fdf4;">
+      <input type="text" id="cp-search" placeholder="Search country..." oninput="filterCpList(this.value)"
+        style="width:100%;padding:9px 14px;border:1.5px solid #bbf7d0;border-radius:10px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;color:#166534;background:#f0fdf4;"/>
+    </div>
+    <div id="cp-list" style="overflow-y:auto;flex:1;padding:8px 0;"></div>
+  `;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  
+  // Close on overlay click
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  
+  renderCpList('');
+  setTimeout(()=>{ const s=document.getElementById('cp-search'); if(s) s.focus(); }, 100);
+}
+
+function renderCpList(q){
+  const list = document.getElementById('cp-list');
+  if(!list) return;
+  const ql = q.toLowerCase();
+  const entries = Object.entries(COUNTRY_MAP)
+    .filter(([code,[f,n]])=> !ql || n.toLowerCase().includes(ql) || code.toLowerCase().includes(ql))
+    .sort((a,b)=>a[1][1].localeCompare(b[1][1]));
+  
+  list.innerHTML = entries.map(([code,[flag,name]])=>
+    `<div onclick="pickCountry('${code}');document.getElementById('cp-overlay').remove()"
+      style="display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;border-bottom:1px solid #f9fafb;transition:background .1s;"
+      onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">
+      <img src="https://flagcdn.com/24x18/${code.toLowerCase()}.png" width="24" height="18" style="border-radius:2px;flex-shrink:0;" onerror="this.remove()"/>
+      <span style="font-size:14px;font-weight:600;color:#166534;">${name}</span>
+      <span style="font-size:12px;color:#86efac;margin-left:auto;">${code}</span>
+    </div>`
+  ).join('');
+}
+
+function filterCpList(q){ renderCpList(q); }
+
+function pickCountry(code){
+  setCountry(code);
+}
+
+// Show correct page on load
+if(token&&me){
+  initChat();
+} else {
+  document.documentElement.classList.remove('has-session');
+  document.getElementById('pg-landing').style.display='block';
+  // Auto-detect country after page loads
+  setTimeout(initCountryAutoDetect, 300);
+}
+</script>
+<!-- CREATE ROOM MODAL -->
+<div id="create-room-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:2rem;width:100%;max-width:380px;margin:1rem;border:1px solid #c8edda;box-shadow:0 8px 32px rgba(0,0,0,.15);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div style="font-size:17px;font-weight:700;color:#15803d;">🏠 Create Room</div>
+      <button onclick="hideCreateRoom()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;">✕</button>
+    </div>
+    <div style="margin-bottom:1rem;">
+      <label style="font-size:13px;font-weight:600;color:#166534;display:block;margin-bottom:5px;">Room Name *</label>
+      <input id="cr-name" type="text" placeholder="e.g. My Private Room" style="width:100%;padding:10px 14px;border:1.5px solid #bbf7d0;border-radius:10px;font-size:14px;font-family:'Nunito',sans-serif;color:#166534;background:#f0fdf4;outline:none;"/>
+    </div>
+    <div style="margin-bottom:1rem;">
+      <label style="font-size:13px;font-weight:600;color:#166534;display:block;margin-bottom:5px;">Password (optional) 🔒</label>
+      <input id="cr-pw" type="password" placeholder="Leave empty for public access" style="width:100%;padding:10px 14px;border:1.5px solid #bbf7d0;border-radius:10px;font-size:14px;font-family:'Nunito',sans-serif;color:#166534;background:#f0fdf4;outline:none;"/>
+      <div style="font-size:11px;color:#86efac;margin-top:4px;">Password set කළොත් join වෙන්න password ඕනේ</div>
+    </div>
+    <div id="cr-e" style="display:none;color:#ef4444;font-size:12px;font-weight:600;padding:8px 12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;margin-bottom:10px;"></div>
+    <button onclick="doCreateRoom()" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:15px;font-weight:700;border:none;border-radius:12px;cursor:pointer;font-family:'Nunito',sans-serif;">
+      Create Room 🚀
+    </button>
+  </div>
+</div>
+
+<!-- CREATE ROOM MODAL -->
+<div id="create-room-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:2rem;width:100%;max-width:380px;margin:1rem;border:1px solid #c8edda;box-shadow:0 8px 32px rgba(0,0,0,.15);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div style="font-size:17px;font-weight:700;color:#15803d;">🏠 Create Room</div>
+      <button onclick="hideCreateRoom()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;">✕</button>
+    </div>
+    <div style="margin-bottom:1rem;"><label style="font-size:13px;font-weight:600;color:#166534;display:block;margin-bottom:5px;">Room Name *</label><input id="cr-name" type="text" placeholder="e.g. My Private Room" style="width:100%;padding:10px 14px;border:1.5px solid #bbf7d0;border-radius:10px;font-size:14px;font-family:'Nunito',sans-serif;color:#166534;background:#f0fdf4;outline:none;"/></div>
+    <div style="margin-bottom:1rem;"><label style="font-size:13px;font-weight:600;color:#166534;display:block;margin-bottom:5px;">Password (optional) 🔒</label><input id="cr-pw" type="password" placeholder="Leave empty for public access" style="width:100%;padding:10px 14px;border:1.5px solid #bbf7d0;border-radius:10px;font-size:14px;font-family:'Nunito',sans-serif;color:#166634;background:#f0fdf4;outline:none;"/></div>
+    <div id="cr-e" style="display:none;color:#ef4444;font-size:12px;font-weight:600;padding:8px 12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;margin-bottom:10px;"></div>
+    <button onclick="doCreateRoom()" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:15px;font-weight:700;border:none;border-radius:12px;cursor:pointer;font-family:'Nunito',sans-serif;">Create Room 🚀</button>
+  </div>
+</div>
+</body>
+</html>
